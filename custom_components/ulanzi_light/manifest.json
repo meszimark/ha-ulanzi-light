@@ -10,8 +10,8 @@
   "dependencies": ["bluetooth_adapters"],
   "documentation": "https://github.com/meszimark/ha-ulanzi-light",
   "integration_type": "device",
-  "iot_class": "assumed_state",
+  "iot_class": "local_polling",
   "issue_tracker": "https://github.com/meszimark/ha-ulanzi-light/issues",
   "requirements": [],
-  "version": "0.1.2"
+  "version": "0.2.0"
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Effects: Flash, TV, Candle, Strobe 1–3.
+- The real state is read back from the light after every command and once a
+  minute, so changes made on the light or in the Ulanzi app are picked up.
+- The colour temperature range is taken from the light.
+- Turning off is a single command now.
+
 ## 0.1.2
 
 - First public release: HACS metadata, licence, documentation.

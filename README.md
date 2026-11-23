@@ -12,8 +12,12 @@ Each light becomes one `light` entity with:
 - on / off
 - brightness (1–100 %)
 - colour temperature, 2700–6500 K
+- effects: Flash, TV, Candle, Strobe 1–3
+- real state: the light is asked for its state after every command and once
+  a minute, so changes made on the light itself or in the Ulanzi app show up
+  in Home Assistant
 
-RGB, effects and battery level are not supported yet.
+RGB and battery level are not supported yet.
 
 ## Supported lights
 
@@ -55,14 +59,15 @@ folder and restart Home Assistant.
 
 ## Known limitations
 
-- **Assumed state.** The light does not report its state, so Home Assistant
-  shows what it sent last. Changes made on the light itself or in the Ulanzi
-  app are not picked up.
 - **One connection at a time.** While the Ulanzi app is connected, Home
-  Assistant cannot reach the light, and the other way round.
-- **Short delay.** The light drops an idle Bluetooth link after about ten
-  seconds, so a command after a pause can take 1–3 seconds while the
-  integration reconnects.
+  Assistant cannot reach the light, and the other way round. Home Assistant
+  only holds the link for a few seconds at a time.
+- **Short delay after a pause.** The light drops the Bluetooth link about ten
+  seconds after connecting, so the first command after a pause takes a second
+  or two while the integration reconnects.
+- **State can lag by up to a minute** for changes made outside Home Assistant.
+- **Lights that never answer** the status query keep working, with the state
+  Home Assistant sent last (assumed state).
 
 ## Troubleshooting
 
@@ -81,15 +86,30 @@ Service `FFF0`, write characteristic `FFF2`, notify characteristic `FFF1`.
 | Command | Bytes |
 | --- | --- |
 | On | `FF A1 01 00 00 AA` |
-| Off | `FF A1 01 30 30 AA`, then `FF A1 01 01 01 AA` |
+| Off | `FF A1 01 01 01 AA` |
 | Brightness (0–100) | `FF A2 01 LL LL AA` |
-| Colour temperature (K, big-endian) | `FF A3 02 HH LL CS AA`, `CS = (HH + LL) & 0xFF` |
+| Colour temperature (K, big-endian) | `FF A3 02 HH LL CS AA`, `CS = (HH + LL) & 0xFF` – also ends an effect |
+| Effect | `FF A1 01 XX XX AA` – Flash `04`, TV `05`, Candle `06`, Strobe 1–3 `0C` `0D` `0E` |
+| Status query | `FF A1 01 30 30 AA` |
+
+The light answers a status query with a 20-byte notification:
+
+`FF B1 10 | brightness | kelvin (2) | 4 unused | mode | power | min kelvin (2) | max kelvin (2) | 3 unused | checksum`
+
+- `mode`: `02` for plain white light, otherwise the effect code
+- `power`: `01` on, `00` off
+- `checksum`: sum of the 16 bytes after `FF B1 10`, modulo 256
+
+About three seconds after connecting the light also sends `BB B6` + 8 random
+bytes + `FF`, and closes the link roughly seven seconds later. The Ulanzi app
+presumably answers this; the integration does not, and reconnects instead.
 
 ## Credits
 
-The protocol was documented by Kevin Louie's
+The command set was documented by Kevin Louie's
 [lctl](https://github.com/kevinlouie/lctl) (MIT). This integration is an
-independent implementation for Home Assistant.
+independent implementation for Home Assistant; the status query and its
+answer were worked out on a real light.
 
 ## Disclaimer
 
