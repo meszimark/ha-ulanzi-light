@@ -2,34 +2,49 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+import logging
 from typing import Any
 
 from homeassistant.components import bluetooth
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
+    ATTR_EFFECT,
+    EFFECT_OFF,
     ColorMode,
     LightEntity,
+    LightEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
-    CMD_OFF_1,
-    CMD_OFF_2,
+    CMD_OFF,
     CMD_ON,
     DOMAIN,
+    EFFECTS,
     MAX_KELVIN,
     MIN_KELVIN,
+    UlanziStatus,
     cmd_brightness,
     cmd_color_temp,
+    cmd_effect,
 )
 from .device import UlanziDevice
+
+_LOGGER = logging.getLogger(__name__)
+
+# How often the light is asked for its state, to pick up changes made on the
+# light itself or in the Ulanzi app.
+SCAN_INTERVAL = timedelta(seconds=60)
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
@@ -39,13 +54,20 @@ async def async_setup_entry(
 
 
 class UlanziLight(LightEntity, RestoreEntity):
-    """The light reports nothing back, so state is what was last sent."""
+    """An Ulanzi light.
+
+    The state shown is what the light reports. Until it has answered once
+    (or on a model that never answers) it is what was last sent.
+    """
 
     _attr_has_entity_name = True
     _attr_name = None
+    _attr_should_poll = True
     _attr_assumed_state = True
     _attr_color_mode = ColorMode.COLOR_TEMP
     _attr_supported_color_modes = {ColorMode.COLOR_TEMP}
+    _attr_supported_features = LightEntityFeature.EFFECT
+    _attr_effect_list = [EFFECT_OFF, *EFFECTS]
     _attr_min_color_temp_kelvin = MIN_KELVIN
     _attr_max_color_temp_kelvin = MAX_KELVIN
 
@@ -55,6 +77,7 @@ class UlanziLight(LightEntity, RestoreEntity):
         self._attr_is_on = False
         self._attr_brightness = 128
         self._attr_color_temp_kelvin = 5600
+        self._attr_effect = EFFECT_OFF
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, device.address)},
             connections={(dr.CONNECTION_BLUETOOTH, device.address)},
@@ -70,11 +93,14 @@ class UlanziLight(LightEntity, RestoreEntity):
                 self._attr_brightness = int(b)
             if (k := last.attributes.get(ATTR_COLOR_TEMP_KELVIN)) is not None:
                 self._attr_color_temp_kelvin = int(k)
+            if (e := last.attributes.get(ATTR_EFFECT)) in self._attr_effect_list:
+                self._attr_effect = e
 
         address = self._device.address
         self._attr_available = bluetooth.async_address_present(
             self.hass, address, connectable=True
         )
+        self.async_on_remove(self._device.add_listener(self._on_status))
         self.async_on_remove(
             bluetooth.async_register_callback(
                 self.hass,
@@ -103,23 +129,64 @@ class UlanziLight(LightEntity, RestoreEntity):
         self._attr_available = False
         self.async_write_ha_state()
 
+    def _apply(self, status: UlanziStatus) -> None:
+        self._attr_assumed_state = False
+        self._attr_is_on = status.is_on
+        if status.brightness_pct > 0:
+            self._attr_brightness = max(1, round(status.brightness_pct * 255 / 100))
+        if status.min_kelvin < status.max_kelvin:
+            self._attr_min_color_temp_kelvin = status.min_kelvin
+            self._attr_max_color_temp_kelvin = status.max_kelvin
+        if status.kelvin:
+            self._attr_color_temp_kelvin = status.kelvin
+        self._attr_effect = status.effect or EFFECT_OFF
+
+    @callback
+    def _on_status(self, status: UlanziStatus) -> None:
+        self._apply(status)
+        self.async_write_ha_state()
+
+    async def async_update(self) -> None:
+        """Ask the light for its state, without holding on to the link."""
+        if not self._attr_available:
+            return
+        try:
+            await self._device.send(release=True)
+        except HomeAssistantError as err:
+            # Busy with another app, or just out of reach: keep what we have.
+            _LOGGER.debug("%s: state not read: %s", self._device.name, err)
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         packets: list[bytes] = []
         if not self._attr_is_on:
             packets.append(CMD_ON)
+
+        effect = kwargs.get(ATTR_EFFECT)
         if ATTR_COLOR_TEMP_KELVIN in kwargs:
+            # Setting a colour temperature also ends a running effect.
             self._attr_color_temp_kelvin = int(kwargs[ATTR_COLOR_TEMP_KELVIN])
+            self._attr_effect = EFFECT_OFF
             packets.append(cmd_color_temp(self._attr_color_temp_kelvin))
+        elif effect == EFFECT_OFF:
+            self._attr_effect = EFFECT_OFF
+            packets.append(cmd_color_temp(self._attr_color_temp_kelvin or 5600))
+        elif effect in EFFECTS:
+            self._attr_effect = effect
+            packets.append(cmd_effect(EFFECTS[effect]))
+
         if ATTR_BRIGHTNESS in kwargs:
             self._attr_brightness = int(kwargs[ATTR_BRIGHTNESS])
         if ATTR_BRIGHTNESS in kwargs or not self._attr_is_on:
             percent = max(1, round((self._attr_brightness or 1) * 100 / 255))
             packets.append(cmd_brightness(percent))
-        await self._device.send(*packets)
-        self._attr_is_on = True
+
+        status = await self._device.send(*packets)
+        if status is None:
+            self._attr_is_on = True
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self._device.send(CMD_OFF_1, CMD_OFF_2)
-        self._attr_is_on = False
+        status = await self._device.send(CMD_OFF)
+        if status is None:
+            self._attr_is_on = False
         self.async_write_ha_state()
