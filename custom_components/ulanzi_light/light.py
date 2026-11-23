@@ -23,6 +23,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
@@ -42,8 +43,9 @@ from .device import UlanziDevice
 _LOGGER = logging.getLogger(__name__)
 
 # How often the light is asked for its state, to pick up changes made on the
-# light itself or in the Ulanzi app.
-SCAN_INTERVAL = timedelta(seconds=60)
+# light itself or in the Ulanzi app. Home Assistant's own polling is not used:
+# it would also poll after every command and close the link each time.
+POLL_INTERVAL = timedelta(seconds=60)
 PARALLEL_UPDATES = 1
 
 
@@ -62,7 +64,7 @@ class UlanziLight(LightEntity, RestoreEntity):
 
     _attr_has_entity_name = True
     _attr_name = None
-    _attr_should_poll = True
+    _attr_should_poll = False
     _attr_assumed_state = True
     _attr_color_mode = ColorMode.COLOR_TEMP
     _attr_supported_color_modes = {ColorMode.COLOR_TEMP}
@@ -101,6 +103,12 @@ class UlanziLight(LightEntity, RestoreEntity):
             self.hass, address, connectable=True
         )
         self.async_on_remove(self._device.add_listener(self._on_status))
+        self.async_on_remove(
+            async_track_time_interval(self.hass, self._poll, POLL_INTERVAL)
+        )
+        self.hass.async_create_background_task(
+            self._poll(), f"{DOMAIN} first state read"
+        )
         self.async_on_remove(
             bluetooth.async_register_callback(
                 self.hass,
@@ -146,12 +154,16 @@ class UlanziLight(LightEntity, RestoreEntity):
         self._apply(status)
         self.async_write_ha_state()
 
-    async def async_update(self) -> None:
-        """Ask the light for its state, without holding on to the link."""
+    async def _poll(self, _now=None) -> None:
+        """Ask the light for its state; the answer arrives in _on_status.
+
+        A link opened just for this is closed again straight away, so the
+        light stays free for the Ulanzi app. One already open is left alone.
+        """
         if not self._attr_available:
             return
         try:
-            await self._device.send(release=True)
+            await self._device.send(release=not self._device.is_connected)
         except HomeAssistantError as err:
             # Busy with another app, or just out of reach: keep what we have.
             _LOGGER.debug("%s: state not read: %s", self._device.name, err)
