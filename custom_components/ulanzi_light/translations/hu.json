@@ -1,0 +1,20 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "description": "Válaszd ki a hozzáadandó Ulanzi lámpát, vagy ha nem ismertem fel egyet sem, írd be a Bluetooth-címét (AA:BB:CC:DD:EE:FF). Előbb zárd be az Ulanzi appot: a lámpa egyszerre egy kapcsolatot fogad.",
+        "data": {
+          "address": "Lámpa vagy Bluetooth-cím"
+        }
+      },
+      "confirm": {
+        "description": "Hozzáadod: {name}?"
+      }
+    },
+    "abort": {
+      "already_configured": "Ez a lámpa már be van állítva.",
+      "no_devices_found": "Nem találtam Ulanzi lámpát a közelben. Kapcsold be, és zárd be az Ulanzi appot."
+    }
+  }
+}
