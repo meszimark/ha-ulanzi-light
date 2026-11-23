@@ -1,0 +1,17 @@
+{
+  "domain": "ulanzi_light",
+  "name": "Ulanzi Light",
+  "bluetooth": [
+    { "local_name": "Ulanzi light*", "connectable": true },
+    { "manufacturer_id": 65295, "connectable": true }
+  ],
+  "codeowners": ["@meszimark"],
+  "config_flow": true,
+  "dependencies": ["bluetooth_adapters"],
+  "documentation": "https://github.com/meszimark/ha-ulanzi-light",
+  "integration_type": "device",
+  "iot_class": "assumed_state",
+  "issue_tracker": "https://github.com/meszimark/ha-ulanzi-light/issues",
+  "requirements": [],
+  "version": "0.1.2"
+}

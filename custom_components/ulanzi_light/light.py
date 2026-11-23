@@ -1,0 +1,125 @@
+"""Light platform for Ulanzi lights."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from homeassistant.components import bluetooth
+from homeassistant.components.light import (
+    ATTR_BRIGHTNESS,
+    ATTR_COLOR_TEMP_KELVIN,
+    ColorMode,
+    LightEntity,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import STATE_ON
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
+
+from .const import (
+    CMD_OFF_1,
+    CMD_OFF_2,
+    CMD_ON,
+    DOMAIN,
+    MAX_KELVIN,
+    MIN_KELVIN,
+    cmd_brightness,
+    cmd_color_temp,
+)
+from .device import UlanziDevice
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    async_add_entities([UlanziLight(entry.runtime_data)])
+
+
+class UlanziLight(LightEntity, RestoreEntity):
+    """The light reports nothing back, so state is what was last sent."""
+
+    _attr_has_entity_name = True
+    _attr_name = None
+    _attr_assumed_state = True
+    _attr_color_mode = ColorMode.COLOR_TEMP
+    _attr_supported_color_modes = {ColorMode.COLOR_TEMP}
+    _attr_min_color_temp_kelvin = MIN_KELVIN
+    _attr_max_color_temp_kelvin = MAX_KELVIN
+
+    def __init__(self, device: UlanziDevice) -> None:
+        self._device = device
+        self._attr_unique_id = device.address
+        self._attr_is_on = False
+        self._attr_brightness = 128
+        self._attr_color_temp_kelvin = 5600
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, device.address)},
+            connections={(dr.CONNECTION_BLUETOOTH, device.address)},
+            manufacturer="Ulanzi",
+            name=device.name,
+        )
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if (last := await self.async_get_last_state()) is not None:
+            self._attr_is_on = last.state == STATE_ON
+            if (b := last.attributes.get(ATTR_BRIGHTNESS)) is not None:
+                self._attr_brightness = int(b)
+            if (k := last.attributes.get(ATTR_COLOR_TEMP_KELVIN)) is not None:
+                self._attr_color_temp_kelvin = int(k)
+
+        address = self._device.address
+        self._attr_available = bluetooth.async_address_present(
+            self.hass, address, connectable=True
+        )
+        self.async_on_remove(
+            bluetooth.async_register_callback(
+                self.hass,
+                self._seen,
+                {"address": address, "connectable": True},
+                bluetooth.BluetoothScanningMode.ACTIVE,
+            )
+        )
+        self.async_on_remove(
+            bluetooth.async_track_unavailable(
+                self.hass, self._gone, address, connectable=True
+            )
+        )
+
+    @callback
+    def _seen(self, _info, _change) -> None:
+        if not self._attr_available:
+            self._attr_available = True
+            self.async_write_ha_state()
+
+    @callback
+    def _gone(self, _info) -> None:
+        # A connected light stops advertising; that is not the same as gone.
+        if self._device.is_connected:
+            return
+        self._attr_available = False
+        self.async_write_ha_state()
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        packets: list[bytes] = []
+        if not self._attr_is_on:
+            packets.append(CMD_ON)
+        if ATTR_COLOR_TEMP_KELVIN in kwargs:
+            self._attr_color_temp_kelvin = int(kwargs[ATTR_COLOR_TEMP_KELVIN])
+            packets.append(cmd_color_temp(self._attr_color_temp_kelvin))
+        if ATTR_BRIGHTNESS in kwargs:
+            self._attr_brightness = int(kwargs[ATTR_BRIGHTNESS])
+        if ATTR_BRIGHTNESS in kwargs or not self._attr_is_on:
+            percent = max(1, round((self._attr_brightness or 1) * 100 / 255))
+            packets.append(cmd_brightness(percent))
+        await self._device.send(*packets)
+        self._attr_is_on = True
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._device.send(CMD_OFF_1, CMD_OFF_2)
+        self._attr_is_on = False
+        self.async_write_ha_state()
