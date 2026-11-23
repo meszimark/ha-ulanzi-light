@@ -23,8 +23,8 @@ RGB and battery level are not supported yet.
 
 | Light | Status |
 | --- | --- |
-| Ulanzi COB light advertising as `Ulanzi light(XXXX)` | Tested |
-| VL-200Bi, VL-120Bi, VL-120C, EC65, AL60, AL120, L149 | Untested – same protocol according to [lctl](https://github.com/kevinlouie/lctl) |
+| VL-120Bi (120 W bi-colour COB, advertises as `Ulanzi light(XXXX)`) | Tested |
+| VL-200Bi, VL-120C, EC65, AL60, AL120, L149 | Untested – same protocol according to [lctl](https://github.com/kevinlouie/lctl) |
 
 If your light works (or does not), please open an issue with the model name.
 
@@ -57,6 +57,12 @@ folder and restart Home Assistant.
    You can find it under Settings → Devices & services → Bluetooth →
    advertisement monitor.
 
+## Options
+
+**Settings → Devices & services → Ulanzi Light → Configure** sets how often
+Home Assistant asks the light for its state (60 seconds by default). `0` turns
+the regular read off; the state is then only read after a command.
+
 ## Known limitations
 
 - **One connection at a time.** While the Ulanzi app is connected, Home
@@ -65,7 +71,8 @@ folder and restart Home Assistant.
 - **Short delay after a pause.** The light drops the Bluetooth link about ten
   seconds after connecting, so the first command after a pause takes a second
   or two while the integration reconnects.
-- **State can lag by up to a minute** for changes made outside Home Assistant.
+- **State can lag** by the read interval (a minute by default) for changes
+  made outside Home Assistant.
 - **Lights that never answer** the status query keep working, with the state
   Home Assistant sent last (assumed state).
 
