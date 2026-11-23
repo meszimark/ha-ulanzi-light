@@ -12,8 +12,12 @@ Minden lámpa egy `light` entitás lesz:
 - be / ki
 - fényerő (1–100 %)
 - színhőmérséklet, 2700–6500 K
+- effektek: Flash, TV, Candle, Strobe 1–3
+- valós állapot: minden parancs után és percenként egyszer lekérdezi a
+  lámpát, így a lámpán vagy az Ulanzi appban végzett állítás is megjelenik a
+  Home Assistantban
 
-RGB, effektek és akkuszint egyelőre nincs.
+RGB és akkuszint egyelőre nincs.
 
 ## Támogatott lámpák
 
@@ -53,13 +57,16 @@ alá, és indítsd újra a Home Assistantot.
 
 ## Ismert korlátok
 
-- **Feltételezett állapot.** A lámpa nem jelzi vissza az állapotát, a Home
-  Assistant azt mutatja, amit utoljára küldött. A lámpán vagy az Ulanzi
-  appban végzett állítást nem látja.
 - **Egyszerre egy kapcsolat.** Amíg az Ulanzi app csatlakozik, a Home
-  Assistant nem éri el a lámpát, és fordítva.
-- **Rövid késés.** A lámpa kb. tíz másodperc tétlenség után bontja a
-  kapcsolatot, ezért szünet után egy parancs 1–3 másodpercet késhet.
+  Assistant nem éri el a lámpát, és fordítva. A Home Assistant egyszerre csak
+  néhány másodpercig tartja a kapcsolatot.
+- **Rövid késés szünet után.** A lámpa kb. tíz másodperccel a csatlakozás
+  után bontja a kapcsolatot, ezért szünet utáni első parancs egy-két
+  másodpercet késhet.
+- **Az állapot akár egy percet késhet**, ha a változtatás a Home Assistanton
+  kívül történt.
+- **Ha a lámpa nem válaszol** az állapotlekérdezésre, akkor is működik, az
+  utoljára küldött (feltételezett) állapottal.
 
 ## Hibakeresés
 
