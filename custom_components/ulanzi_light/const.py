@@ -9,6 +9,11 @@ DOMAIN = "ulanzi_light"
 WRITE_UUID = "0000fff2-0000-1000-8000-00805f9b34fb"
 NOTIFY_UUID = "0000fff1-0000-1000-8000-00805f9b34fb"
 
+CONF_POLL_INTERVAL = "poll_interval"
+# Seconds between state reads; 0 turns the regular read off.
+DEFAULT_POLL_INTERVAL = 60
+MAX_POLL_INTERVAL = 3600
+
 MIN_KELVIN = 2700
 MAX_KELVIN = 6500
 
