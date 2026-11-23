@@ -29,6 +29,8 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from .const import (
     CMD_OFF,
     CMD_ON,
+    CONF_POLL_INTERVAL,
+    DEFAULT_POLL_INTERVAL,
     DOMAIN,
     EFFECTS,
     MAX_KELVIN,
@@ -42,17 +44,14 @@ from .device import UlanziDevice
 
 _LOGGER = logging.getLogger(__name__)
 
-# How often the light is asked for its state, to pick up changes made on the
-# light itself or in the Ulanzi app. Home Assistant's own polling is not used:
-# it would also poll after every command and close the link each time.
-POLL_INTERVAL = timedelta(seconds=60)
 PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    async_add_entities([UlanziLight(entry.runtime_data)])
+    interval = int(entry.options.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL))
+    async_add_entities([UlanziLight(entry.runtime_data, interval)])
 
 
 class UlanziLight(LightEntity, RestoreEntity):
@@ -73,8 +72,13 @@ class UlanziLight(LightEntity, RestoreEntity):
     _attr_min_color_temp_kelvin = MIN_KELVIN
     _attr_max_color_temp_kelvin = MAX_KELVIN
 
-    def __init__(self, device: UlanziDevice) -> None:
+    def __init__(self, device: UlanziDevice, poll_interval: int) -> None:
         self._device = device
+        # Seconds between state reads, to pick up changes made on the light
+        # itself or in the Ulanzi app; 0 for none. Home Assistant's own
+        # polling is not used: it would also poll after every command and
+        # close the link each time.
+        self._poll_interval = poll_interval
         self._attr_unique_id = device.address
         self._attr_is_on = False
         self._attr_brightness = 128
@@ -103,9 +107,12 @@ class UlanziLight(LightEntity, RestoreEntity):
             self.hass, address, connectable=True
         )
         self.async_on_remove(self._device.add_listener(self._on_status))
-        self.async_on_remove(
-            async_track_time_interval(self.hass, self._poll, POLL_INTERVAL)
-        )
+        if self._poll_interval > 0:
+            self.async_on_remove(
+                async_track_time_interval(
+                    self.hass, self._poll, timedelta(seconds=self._poll_interval)
+                )
+            )
         self.hass.async_create_background_task(
             self._poll(), f"{DOMAIN} first state read"
         )

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- The interval of the regular state read can be set in the options (0 = off).
+- Own icon.
+- VL-120Bi confirmed as tested.
+
 ## 0.2.0
 
 - Effects: Flash, TV, Candle, Strobe 1–3.

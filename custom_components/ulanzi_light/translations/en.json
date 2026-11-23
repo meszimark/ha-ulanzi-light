@@ -16,5 +16,19 @@
       "already_configured": "This light is already set up.",
       "no_devices_found": "No Ulanzi light found nearby. Power it on and close the Ulanzi app."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ulanzi Light options",
+        "description": "Home Assistant asks the light for its state after every command. It can also ask at regular intervals, to pick up changes made on the light itself or in the Ulanzi app.",
+        "data": {
+          "poll_interval": "Seconds between state reads"
+        },
+        "data_description": {
+          "poll_interval": "0 turns the regular read off. While Home Assistant reads the state, the Ulanzi app cannot connect for a few seconds."
+        }
+      }
+    }
   }
 }

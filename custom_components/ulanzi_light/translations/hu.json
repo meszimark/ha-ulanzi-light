@@ -16,5 +16,19 @@
       "already_configured": "Ez a lámpa már be van állítva.",
       "no_devices_found": "Nem találtam Ulanzi lámpát a közelben. Kapcsold be, és zárd be az Ulanzi appot."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ulanzi Light beállítások",
+        "description": "A Home Assistant minden parancs után lekérdezi a lámpa állapotát. Emellett rendszeres időközönként is lekérdezheti, hogy a lámpán vagy az Ulanzi appban végzett állítás is megjelenjen.",
+        "data": {
+          "poll_interval": "Másodperc két lekérdezés között"
+        },
+        "data_description": {
+          "poll_interval": "0 esetén nincs rendszeres lekérdezés. Amíg a Home Assistant lekérdez, az Ulanzi app néhány másodpercig nem tud csatlakozni."
+        }
+      }
+    }
   }
 }

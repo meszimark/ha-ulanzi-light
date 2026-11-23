@@ -23,8 +23,8 @@ RGB és akkuszint egyelőre nincs.
 
 | Lámpa | Állapot |
 | --- | --- |
-| `Ulanzi light(XXXX)` néven hirdető Ulanzi COB lámpa | Tesztelve |
-| VL-200Bi, VL-120Bi, VL-120C, EC65, AL60, AL120, L149 | Nem tesztelt – az [lctl](https://github.com/kevinlouie/lctl) szerint azonos protokoll |
+| VL-120Bi (120 W kétszínű COB, `Ulanzi light(XXXX)` néven hirdet) | Tesztelve |
+| VL-200Bi, VL-120C, EC65, AL60, AL120, L149 | Nem tesztelt – az [lctl](https://github.com/kevinlouie/lctl) szerint azonos protokoll |
 
 Ha a te lámpáddal megy (vagy nem megy), nyiss egy issue-t a típus nevével.
 
@@ -55,6 +55,13 @@ alá, és indítsd újra a Home Assistantot.
    **Beállítások → Eszközök és szolgáltatások → Integráció hozzáadása → Ulanzi Light**.
 3. Ha nem jelenik meg lámpa, írd be a Bluetooth-címét (`AA:BB:CC:DD:EE:FF`).
 
+## Beállítások
+
+**Beállítások → Eszközök és szolgáltatások → Ulanzi Light → Konfigurálás**
+alatt adható meg, milyen gyakran kérdezze le a Home Assistant a lámpa
+állapotát (alapból 60 másodperc). `0` esetén nincs rendszeres lekérdezés, az
+állapot csak parancs után frissül.
+
 ## Ismert korlátok
 
 - **Egyszerre egy kapcsolat.** Amíg az Ulanzi app csatlakozik, a Home
@@ -63,8 +70,8 @@ alá, és indítsd újra a Home Assistantot.
 - **Rövid késés szünet után.** A lámpa kb. tíz másodperccel a csatlakozás
   után bontja a kapcsolatot, ezért szünet utáni első parancs egy-két
   másodpercet késhet.
-- **Az állapot akár egy percet késhet**, ha a változtatás a Home Assistanton
-  kívül történt.
+- **Az állapot késhet** a lekérdezési időközzel (alapból egy perc), ha a
+  változtatás a Home Assistanton kívül történt.
 - **Ha a lámpa nem válaszol** az állapotlekérdezésre, akkor is működik, az
   utoljára küldött (feltételezett) állapottal.
 
