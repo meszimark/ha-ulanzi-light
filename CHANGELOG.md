@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- The HACS validation runs with no checks skipped.
+
 ## 0.3.0
 
 - The interval of the regular state read can be set in the options (0 = off).
