@@ -36,11 +36,11 @@ If your light works (or does not), please open an issue with the model name.
 
 ## Installation
 
-### HACS
+### HACS (recommended)
 
-1. HACS → ⋮ → **Custom repositories**
-2. Repository: `https://github.com/meszimark/ha-ulanzi-light`, type: **Integration**
-3. Install **Ulanzi Light**, then restart Home Assistant.
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=meszimark&repository=ha-ulanzi-light&category=integration)
+
+Or: HACS → search for **Ulanzi Light** → Download, then restart Home Assistant.
 
 ### Manual
 

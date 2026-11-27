@@ -36,11 +36,11 @@ Ha a te lámpáddal megy (vagy nem megy), nyiss egy issue-t a típus nevével.
 
 ## Telepítés
 
-### HACS
+### HACS (ajánlott)
 
-1. HACS → ⋮ → **Egyéni tárolók**
-2. Tároló: `https://github.com/meszimark/ha-ulanzi-light`, típus: **Integráció**
-3. Telepítsd az **Ulanzi Light** integrációt, majd indítsd újra a Home Assistantot.
+[![A tároló megnyitása a HACS-ben a saját Home Assistantodban.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=meszimark&repository=ha-ulanzi-light&category=integration)
+
+Vagy: HACS → keresés: **Ulanzi Light** → Letöltés, majd indítsd újra a Home Assistantot.
 
 ### Kézi
 
